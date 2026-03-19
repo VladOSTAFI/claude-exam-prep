@@ -100,14 +100,25 @@ function parseModule(filename: string): Module {
   description = description.replace(/\*\*/g, '');
 
   // Extract sections: all ## and ### headings
+  // Deduplicate IDs by appending -2, -3, etc. for duplicates (matching rehype-slug behavior)
   const sections: Section[] = [];
+  const idCounts: Record<string, number> = {};
   const headingRegex = /^(#{2,3})\s+(.+)$/gm;
   let match;
   while ((match = headingRegex.exec(content)) !== null) {
     const depth = match[1].length; // 2 or 3
     const sectionTitle = match[2].trim();
+    const baseId = slugify(sectionTitle);
+
+    // Track how many times this base ID has appeared
+    const count = idCounts[baseId] || 0;
+    idCounts[baseId] = count + 1;
+
+    // First occurrence uses the base ID; subsequent ones get -2, -3, etc.
+    const id = count === 0 ? baseId : `${baseId}-${count + 1}`;
+
     sections.push({
-      id: slugify(sectionTitle),
+      id,
       title: sectionTitle,
       depth,
     });

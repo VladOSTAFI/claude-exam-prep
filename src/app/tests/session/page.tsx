@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useCallback, useState } from 'react';
+import { useEffect, useCallback, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useStore } from '@/store/useStore';
 import QuestionCard from '@/components/tests/QuestionCard';
@@ -19,6 +19,7 @@ export default function TestSessionPage() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showConfirm, setShowConfirm] = useState(false);
   const [showMap, setShowMap] = useState(false);
+  const isSubmittingRef = useRef(false);
 
   const questions = currentTest?.questions ?? [];
   const answers = currentTest?.answers ?? {};
@@ -26,8 +27,9 @@ export default function TestSessionPage() {
   const timeLimit = currentTest?.timeLimit ?? 0;
   const question = questions[currentIndex];
 
-  // Redirect if no active test
+  // Redirect if no active test (but not if we just submitted)
   useEffect(() => {
+    if (isSubmittingRef.current) return;
     if (!currentTest || questions.length === 0) {
       router.replace('/tests');
     }
@@ -50,11 +52,13 @@ export default function TestSessionPage() {
   }, [question, flagQuestion]);
 
   const handleSubmit = useCallback(() => {
+    isSubmittingRef.current = true;
     submitTest();
     router.push('/tests/results');
   }, [submitTest, router]);
 
   const handleTimeUp = useCallback(() => {
+    isSubmittingRef.current = true;
     submitTest();
     router.push('/tests/results');
   }, [submitTest, router]);

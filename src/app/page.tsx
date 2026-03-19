@@ -1,5 +1,5 @@
 import { getAllModules } from '@/lib/modules';
-import ModuleCard from '@/components/modules/ModuleCard';
+import ModuleGrid from '@/components/modules/ModuleGrid';
 import Button from '@/components/ui/Button';
 import GlassCard from '@/components/ui/GlassCard';
 
@@ -68,11 +68,7 @@ export default async function HomePage() {
             </Button>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {modules.map((mod) => (
-              <ModuleCard key={mod.slug} module={mod} />
-            ))}
-          </div>
+          <ModuleGrid modules={modules} />
         </section>
       )}
 

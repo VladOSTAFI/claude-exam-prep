@@ -42,9 +42,9 @@ export default function TableOfContents({ sections }: TableOfContentsProps) {
 
   return (
     <nav className="space-y-0.5">
-      {sections.map((section) => (
+      {sections.map((section, index) => (
         <button
-          key={section.id}
+          key={`${index}-${section.id}`}
           onClick={() => scrollTo(section.id)}
           className={`block w-full text-left text-sm py-1.5 px-3 rounded transition-all duration-300 ${
             activeId === section.id

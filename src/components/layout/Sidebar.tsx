@@ -47,9 +47,9 @@ export default function Sidebar({ sections }: SidebarProps) {
           Contents
         </h3>
         <nav className="space-y-0.5">
-          {sections.map((section) => (
+          {sections.map((section, index) => (
             <button
-              key={section.id}
+              key={`${index}-${section.id}`}
               onClick={() => handleClick(section.id)}
               className={`block w-full text-left text-sm py-1.5 px-2 rounded transition-all duration-300 ${
                 activeId === section.id

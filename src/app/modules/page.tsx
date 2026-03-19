@@ -1,5 +1,5 @@
 import { getAllModules } from '@/lib/modules';
-import ModuleCard from '@/components/modules/ModuleCard';
+import ModuleGrid from '@/components/modules/ModuleGrid';
 
 export default async function ModulesPage() {
   let modules: Awaited<ReturnType<typeof getAllModules>> = [];
@@ -22,11 +22,7 @@ export default async function ModulesPage() {
       </div>
 
       {modules.length > 0 ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {modules.map((mod) => (
-            <ModuleCard key={mod.slug} module={mod} />
-          ))}
-        </div>
+        <ModuleGrid modules={modules} />
       ) : (
         <div className="glass p-12 text-center rounded-lg">
           <p className="text-[var(--text-secondary)]">
