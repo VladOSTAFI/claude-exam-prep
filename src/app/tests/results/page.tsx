@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { useStore } from '@/store/useStore';
+import { useStore, useHasHydrated } from '@/store/useStore';
 import ResultsChart from '@/components/tests/ResultsChart';
 import QuestionCard from '@/components/tests/QuestionCard';
 import GlassCard from '@/components/ui/GlassCard';
@@ -14,6 +14,7 @@ const MAX_SCORE = 1000;
 
 export default function TestResultsPage() {
   const router = useRouter();
+  const hydrated = useHasHydrated();
   const progress = useStore((s) => s.progress);
   const [expandedQ, setExpandedQ] = useState<number | null>(null);
   const [animatedScore, setAnimatedScore] = useState(0);
@@ -26,10 +27,10 @@ export default function TestResultsPage() {
   }, [progress]);
 
   useEffect(() => {
-    if (!session) {
+    if (hydrated && !session) {
       router.replace('/tests');
     }
-  }, [session, router]);
+  }, [hydrated, session, router]);
 
   // Calculate results
   const results = useMemo(() => {
@@ -80,6 +81,14 @@ export default function TestResultsPage() {
 
     requestAnimationFrame(animate);
   }, [results.score]);
+
+  if (!hydrated) {
+    return (
+      <div className="max-w-4xl mx-auto px-4 py-12 text-center">
+        <p className="text-[var(--text-secondary)]">Loading...</p>
+      </div>
+    );
+  }
 
   if (!session) return null;
 

@@ -1,7 +1,8 @@
+import { useState, useEffect } from 'react';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { Question, TestSession, UserProgress } from '@/types';
-import { generateId, calculateScore } from '@/lib/utils';
+import { generateId } from '@/lib/utils';
 
 interface AppStore {
   // Theme
@@ -180,3 +181,16 @@ export const useStore = create<AppStore>()(
     }
   )
 );
+
+// Hydration hook — prevents redirects before localStorage is loaded
+export const useHasHydrated = () => {
+  const [hydrated, setHydrated] = useState(false);
+  useEffect(() => {
+    const unsub = useStore.persist.onFinishHydration(() => setHydrated(true));
+    // If already hydrated (e.g. sync storage), set immediately
+    if (useStore.persist.hasHydrated()) setHydrated(true);
+    return unsub;
+  }, []);
+  return hydrated;
+};
+

@@ -120,6 +120,7 @@ export default function TestSessionPage() {
         <div className="flex items-center gap-2">
           <button
             onClick={handleFlag}
+            aria-pressed={isFlagged}
             className={`px-3 py-1.5 rounded-lg text-sm flex items-center gap-1 transition-colors ${
               isFlagged
                 ? 'text-warning bg-warning/10'
@@ -130,7 +131,7 @@ export default function TestSessionPage() {
               <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" />
               <line x1="4" y1="22" x2="4" y2="15" />
             </svg>
-            Flag
+            {isFlagged ? 'Flagged' : 'Flag'}
           </button>
           <Button
             variant="primary"

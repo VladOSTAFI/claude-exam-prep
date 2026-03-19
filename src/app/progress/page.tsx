@@ -1,13 +1,14 @@
 'use client';
 
 import { useMemo } from 'react';
-import { useStore } from '@/store/useStore';
+import { useStore, useHasHydrated } from '@/store/useStore';
 import StatsGrid from '@/components/dashboard/StatsGrid';
 import DomainProgress from '@/components/dashboard/DomainProgress';
 import GlassCard from '@/components/ui/GlassCard';
 import Badge from '@/components/ui/Badge';
 
 export default function ProgressPage() {
+  const hydrated = useHasHydrated();
   const progress = useStore((s) => s.progress);
 
   const stats = useMemo(() => {
@@ -81,6 +82,14 @@ export default function ProgressPage() {
       .filter((d) => d.accuracy < 72 && d.questionsAttempted > 0)
       .sort((a, b) => a.accuracy - b.accuracy);
   }, [domainData]);
+
+  if (!hydrated) {
+    return (
+      <div className="max-w-4xl mx-auto px-4 py-12 text-center">
+        <p className="text-[var(--text-secondary)]">Loading...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
