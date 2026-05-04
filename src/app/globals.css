@@ -3,49 +3,255 @@
 @tailwind utilities;
 
 :root {
-  --background: #ffffff;
-  --foreground: #0f172a;
+  --background: #FAFAFA;
+  --foreground: #181D27;
+  --surface: #FFFFFF;
+  --surface-muted: #F5F5F5;
+  --border: #E9EAEB;
+  --border-strong: #D5D7DA;
+  --ring: #07C5BC;
+  --ring-soft: rgba(7, 197, 188, 0.18);
+  --selection-bg: #C8FFF6;
+  --selection-fg: #013032;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0f172a;
-    --foreground: #f1f5f9;
+    --background: #0A0D12;
+    --foreground: #FDFDFD;
+    --surface: #181D27;
+    --surface-muted: #252B37;
+    --border: #252B37;
+    --border-strong: #414651;
+    --ring: #37E4D9;
+    --ring-soft: rgba(55, 228, 217, 0.22);
+    --selection-bg: #0B4644;
+    --selection-fg: #C8FFF6;
   }
 }
 
 html {
   scroll-behavior: smooth;
+  text-size-adjust: 100%;
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
   color: var(--foreground);
-  background: var(--background);
-  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
-    "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  background-color: var(--background);
+  font-family: var(--font-inter), Inter, ui-sans-serif, system-ui, -apple-system,
+    BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11", "ss01";
+  letter-spacing: -0.005em;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* Overflow-x control for tables at narrow widths */
+::selection {
+  background-color: var(--selection-bg);
+  color: var(--selection-fg);
+}
+
+/* Form focus rings — covecta-style turquoise tint */
+@layer base {
+  [type="text"]:focus,
+  input:where(:not([type])):focus,
+  [type="email"]:focus,
+  [type="url"]:focus,
+  [type="password"]:focus,
+  [type="number"]:focus,
+  [type="date"]:focus,
+  [type="datetime-local"]:focus,
+  [type="month"]:focus,
+  [type="search"]:focus,
+  [type="tel"]:focus,
+  [type="time"]:focus,
+  [type="week"]:focus,
+  [type="checkbox"]:focus,
+  [type="radio"]:focus,
+  [multiple]:focus,
+  textarea:focus,
+  select:focus {
+    --tw-ring-color: var(--ring);
+    border-color: var(--ring);
+    outline: 2px solid var(--ring-soft);
+    outline-offset: 2px;
+  }
+
+  [type="radio"] {
+    accent-color: #07c5bc;
+  }
+  [type="checkbox"] {
+    accent-color: #07c5bc;
+    border-color: #d5d7da;
+  }
+
+  *:focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  button:focus,
+  a:focus {
+    outline: none;
+  }
+}
+
+/* Custom scrollbar — slim, subtle */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #d5d7da transparent;
+}
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  background-color: #d5d7da;
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background-color: #a4a7ae;
+}
+@media (prefers-color-scheme: dark) {
+  * {
+    scrollbar-color: #414651 transparent;
+  }
+  *::-webkit-scrollbar-thumb {
+    background-color: #414651;
+  }
+  *::-webkit-scrollbar-thumb:hover {
+    background-color: #535862;
+  }
+}
+
+/* Prose tweaks */
 .prose table {
   display: block;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
 }
 
-/* Heading anchor links from rehype-autolink-headings */
 .prose :is(h2, h3, h4) .anchor {
   opacity: 0;
-  margin-left: 0.375rem;
+  margin-left: 0.4rem;
   text-decoration: none;
-  color: #94a3b8;
+  color: #07c5bc;
+  font-weight: 400;
+  transition: opacity 200ms ease, transform 200ms ease;
+  display: inline-block;
+  transform: translateX(-4px);
 }
 
 .prose :is(h2, h3, h4):hover .anchor {
   opacity: 1;
+  transform: translateX(0);
 }
 
+/* Decorative utilities */
 @layer utilities {
   .text-balance {
     text-wrap: balance;
   }
+  .text-pretty {
+    text-wrap: pretty;
+  }
+
+  .surface-card {
+    background-color: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 0.875rem;
+    box-shadow: 0 1px 2px 0 rgb(10 13 18 / 0.05);
+  }
+
+  .grid-bg {
+    background-image:
+      linear-gradient(rgba(10, 13, 18, 0.04) 1px, transparent 1px),
+      linear-gradient(to right, rgba(10, 13, 18, 0.04) 1px, transparent 1px);
+    background-size: 32px 32px;
+  }
+
+  .ring-primary-soft {
+    box-shadow: 0 0 0 4px rgb(7 197 188 / 0.18);
+  }
+
+  .ring-brand-soft {
+    box-shadow: 0 0 0 4px rgb(127 86 217 / 0.18);
+  }
+
+  .text-shimmer {
+    background: linear-gradient(
+      90deg,
+      #013032 0%,
+      #07c5bc 25%,
+      #146ab5 50%,
+      #07c5bc 75%,
+      #013032 100%
+    );
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: shine 4s linear infinite;
+  }
+
+  .underline-accent {
+    background-image: linear-gradient(transparent 60%, rgba(7, 197, 188, 0.35) 60%);
+    background-repeat: no-repeat;
+    background-size: 100% 100%;
+    padding-inline: 0.1rem;
+  }
+
+  .divider-dot::before {
+    content: "•";
+    margin-inline: 0.6rem;
+    color: #a4a7ae;
+  }
+}
+
+/* shiki / rehype-pretty-code refinements */
+[data-rehype-pretty-code-figure] pre {
+  background-color: #0a0d12 !important;
+  color: #e9eaeb;
+  overflow-x: auto;
+}
+[data-rehype-pretty-code-figure] pre [data-line] {
+  padding: 0 1rem;
+  border-left: 2px solid transparent;
+}
+[data-rehype-pretty-code-figure] pre [data-highlighted-line] {
+  background-color: rgba(7, 197, 188, 0.08);
+  border-left-color: #07c5bc;
+}
+[data-rehype-pretty-code-figure] [data-line-numbers] > [data-line]::before {
+  content: counter(line);
+  counter-increment: line;
+  display: inline-block;
+  width: 2ch;
+  margin-right: 1rem;
+  text-align: right;
+  color: #535862;
+}
+[data-rehype-pretty-code-title] {
+  background-color: #181d27;
+  color: #d5d7da;
+  padding: 0.5rem 1rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  border-bottom: 1px solid #252b37;
+  border-top-left-radius: 0.75rem;
+  border-top-right-radius: 0.75rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+[data-rehype-pretty-code-title] + pre {
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+  margin-top: 0;
 }

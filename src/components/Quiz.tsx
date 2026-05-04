@@ -13,7 +13,6 @@ interface QuizProps {
   quiz: QuizType;
 }
 
-// Extended internal state that includes the computed result for the submitted phase
 type InternalState =
   | { status: "idle" }
   | { status: "answering"; answers: Record<string, string> }
@@ -70,7 +69,6 @@ function reducer(state: InternalState, action: InternalAction): InternalState {
   }
 }
 
-// Map InternalState to the public QuizState type for consumers
 function toPublicState(state: InternalState): QuizState {
   return state as QuizState;
 }
@@ -79,7 +77,6 @@ export default function Quiz({ quiz }: QuizProps) {
   const [state, dispatch] = useReducer(reducer, { status: "idle" });
   const resultRef = useRef<HTMLHeadingElement>(null);
 
-  // Move focus to the result heading when quiz is submitted
   useEffect(() => {
     if (state.status === "submitted") {
       resultRef.current?.focus();
@@ -92,6 +89,11 @@ export default function Quiz({ quiz }: QuizProps) {
       : {};
 
   const allAnswered = quiz.questions.every((q) => answers[q.id] !== undefined);
+  const answeredCount = quiz.questions.filter(
+    (q) => answers[q.id] !== undefined
+  ).length;
+  const total = quiz.questions.length;
+  const progressPct = Math.round((answeredCount / total) * 100);
 
   const handleSelect = useCallback(
     (questionId: string, choiceId: string) => {
@@ -108,7 +110,6 @@ export default function Quiz({ quiz }: QuizProps) {
 
     const result = computeResult(quiz, state.answers);
 
-    // Persist last score to localStorage (best-effort)
     try {
       localStorage.setItem(
         `cca-prep:last-score:${quiz.slug}`,
@@ -121,7 +122,7 @@ export default function Quiz({ quiz }: QuizProps) {
         })
       );
     } catch {
-      // localStorage unavailable (private mode, SSR, etc.) — non-fatal
+      // localStorage unavailable — non-fatal
     }
 
     dispatch({ type: "submit", result });
@@ -132,17 +133,41 @@ export default function Quiz({ quiz }: QuizProps) {
   }
 
   const isSubmitted = state.status === "submitted";
-  // Keep linter happy — toPublicState used for type documentation only
   void toPublicState;
 
   return (
-    <section aria-labelledby="quiz-heading" className="mt-8">
-      <h2
-        id="quiz-heading"
-        className="mb-6 text-xl font-bold text-slate-900 dark:text-slate-100"
-      >
-        Self-check quiz
-      </h2>
+    <section aria-labelledby="quiz-heading" className="mt-12">
+      <div className="mb-6 flex flex-wrap items-end justify-between gap-4 border-b border-grey-200 pb-4 dark:border-grey-800">
+        <div>
+          <p className="inline-flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-primary-700 dark:text-primary-300">
+            <span aria-hidden="true" className="h-1 w-4 rounded-full bg-primary-500" />
+            Self-check
+          </p>
+          <h2
+            id="quiz-heading"
+            className="mt-1 font-display text-2xl font-semibold tracking-tight text-grey-900 dark:text-grey-25"
+          >
+            Test what you just learned
+          </h2>
+        </div>
+        {!isSubmitted && (
+          <div className="flex flex-col items-end gap-1.5">
+            <span className="text-xs font-medium text-grey-500 dark:text-grey-400">
+              {answeredCount} / {total} answered
+            </span>
+            <div className="h-1.5 w-40 overflow-hidden rounded-full bg-grey-200 dark:bg-grey-800">
+              <div
+                className="h-full rounded-full bg-primary-gradient transition-[width] duration-300"
+                style={{ width: `${progressPct}%` }}
+                role="progressbar"
+                aria-valuenow={answeredCount}
+                aria-valuemin={0}
+                aria-valuemax={total}
+              />
+            </div>
+          </div>
+        )}
+      </div>
 
       {isSubmitted && state.status === "submitted" && (
         <div className="mb-8">
@@ -157,32 +182,45 @@ export default function Quiz({ quiz }: QuizProps) {
       )}
 
       <form onSubmit={handleSubmit} noValidate>
-        <div className="space-y-6">
-          {quiz.questions.map((question) => (
-            <QuizQuestion
-              key={question.id}
-              question={question}
-              selectedChoiceId={answers[question.id] ?? null}
-              revealed={isSubmitted}
-              onSelect={(choiceId) => handleSelect(question.id, choiceId)}
-            />
+        <ol className="space-y-4 [counter-reset:question]">
+          {quiz.questions.map((question, idx) => (
+            <li key={question.id} className="relative">
+              <span
+                aria-hidden="true"
+                className="absolute -left-1 top-6 hidden -translate-x-full select-none font-display text-xs font-semibold uppercase tracking-[0.14em] text-grey-400 sm:block"
+              >
+                {String(idx + 1).padStart(2, "0")}
+              </span>
+              <QuizQuestion
+                question={question}
+                selectedChoiceId={answers[question.id] ?? null}
+                revealed={isSubmitted}
+                onSelect={(choiceId) => handleSelect(question.id, choiceId)}
+              />
+            </li>
           ))}
-        </div>
+        </ol>
 
         {!isSubmitted && (
-          <div className="mt-6 flex items-center gap-4">
+          <div className="mt-8 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-grey-200 bg-white p-5 shadow-xs dark:border-grey-800 dark:bg-grey-900/60">
+            <div className="flex flex-col gap-0.5">
+              <p className="text-sm font-semibold text-grey-900 dark:text-grey-25">
+                {allAnswered
+                  ? "Ready to submit?"
+                  : `Answer ${total - answeredCount} more to submit`}
+              </p>
+              <p className="text-xs text-grey-500 dark:text-grey-400">
+                Pass threshold · 72% (matches the 720/1000 exam mark)
+              </p>
+            </div>
             <button
               type="submit"
               disabled={!allAnswered}
-              className="rounded-lg bg-indigo-600 px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-indigo-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-indigo-500 dark:hover:bg-indigo-600"
+              className="inline-flex items-center gap-2 rounded-xl bg-grey-950 px-6 py-2.5 text-sm font-semibold text-white shadow-xs transition-all hover:-translate-y-0.5 hover:bg-grey-800 hover:shadow-md focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary-200 disabled:cursor-not-allowed disabled:bg-grey-200 disabled:text-grey-400 disabled:shadow-none disabled:hover:translate-y-0 dark:bg-white dark:text-grey-950 dark:hover:bg-grey-100 dark:disabled:bg-grey-800 dark:disabled:text-grey-600"
             >
               Submit answers
+              <span aria-hidden="true">→</span>
             </button>
-            {!allAnswered && (
-              <p className="text-sm text-slate-500 dark:text-slate-400" role="status">
-                Answer all questions to submit.
-              </p>
-            )}
           </div>
         )}
       </form>

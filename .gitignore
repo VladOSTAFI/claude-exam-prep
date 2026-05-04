@@ -24,6 +24,9 @@
 .idea/
 .vscode/
 
+# playwright / e2e artifacts
+.playwright-mcp/
+
 # debug
 npm-debug.log*
 yarn-debug.log*

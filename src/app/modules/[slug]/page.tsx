@@ -12,11 +12,6 @@ interface PageProps {
   params: { slug: string };
 }
 
-/**
- * Only statically render the 7 non-landing module slugs.
- * Any other path (including /modules/exam-overview) falls through to notFound().
- * Setting dynamicParams = false ensures unlisted slugs return 404 at runtime.
- */
 export const dynamicParams = false;
 
 export function generateStaticParams() {
@@ -25,7 +20,6 @@ export function generateStaticParams() {
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const result = getModuleBySlug(params.slug);
-  // Return empty metadata for landing module — it shouldn't be reached
   if (!result || result.meta.isLanding) return {};
   return {
     title: result.meta.title,
@@ -36,7 +30,6 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 export default function ModulePage({ params }: PageProps) {
   const result = getModuleBySlug(params.slug);
 
-  // 404 if slug not found OR if it's the landing module (exam-overview)
   if (!result || result.meta.isLanding) {
     notFound();
   }
@@ -44,66 +37,114 @@ export default function ModulePage({ params }: PageProps) {
   const { meta, markdown } = result;
   const tocItems = extractToc(markdown);
 
-  // Build prev/next navigation from the ordered non-landing modules list
   const modules = getAllModules();
   const currentIndex = modules.findIndex((m) => m.slug === params.slug);
   const prev = currentIndex > 0 ? modules[currentIndex - 1] : undefined;
   const next =
     currentIndex < modules.length - 1 ? modules[currentIndex + 1] : undefined;
 
-  // Look up quiz — may be undefined if somehow slug has no quiz file
   const quiz = quizzesBySlug[params.slug];
   if (!quiz) {
     console.warn(`[ModulePage] No quiz found for slug: ${params.slug}`);
   }
 
-  return (
-    <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
-      <div className="lg:grid lg:grid-cols-[16rem_1fr] lg:gap-10">
-        {/* Sidebar TOC — rendered as sticky on lg, collapsible details on smaller screens */}
-        <Toc items={tocItems} />
+  const stepNumber = String(currentIndex + 1).padStart(2, "0");
+  const totalSteps = String(modules.length).padStart(2, "0");
 
-        {/* Main content column */}
-        <div className="min-w-0">
-          {/* Module metadata badges */}
-          <div className="mb-6 flex flex-wrap items-center gap-3">
-            <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-400">
+  return (
+    <>
+      <section
+        aria-labelledby="module-heading"
+        className="relative overflow-hidden border-b border-grey-200 bg-white dark:border-grey-800 dark:bg-grey-950"
+      >
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 bg-hero-fade opacity-70"
+        />
+        <div className="relative mx-auto max-w-7xl px-4 pb-10 pt-12 sm:px-6 lg:px-8">
+          <div className="flex flex-wrap items-center gap-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-grey-500 dark:text-grey-400">
+            <a href="/" className="text-grey-500 hover:text-primary-700 dark:hover:text-primary-300">
+              Modules
+            </a>
+            <span aria-hidden="true">/</span>
+            <span className="text-grey-700 dark:text-grey-300">
+              Domain {meta.domain}
+            </span>
+            <span aria-hidden="true">/</span>
+            <span className="text-primary-700 dark:text-primary-300">
+              {stepNumber} of {totalSteps}
+            </span>
+          </div>
+
+          <h1
+            id="module-heading"
+            className="mt-4 max-w-4xl font-display text-3xl font-semibold tracking-tight text-grey-950 text-balance sm:text-4xl lg:text-5xl dark:text-grey-25"
+          >
+            {meta.title}
+          </h1>
+
+          {meta.summary && (
+            <p className="mt-3 max-w-2xl text-sm leading-relaxed text-grey-600 sm:text-base dark:text-grey-400">
+              {meta.summary}
+            </p>
+          )}
+
+          <div className="mt-6 flex flex-wrap items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-grey-200 bg-grey-50 px-3 py-1 text-[11px] font-medium uppercase tracking-[0.1em] text-grey-700 dark:border-grey-700 dark:bg-grey-900 dark:text-grey-300">
+              <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-primary-500" />
               Domain {meta.domain}
             </span>
             {meta.weight !== "—" && (
-              <span className="text-xs font-semibold text-indigo-600 dark:text-indigo-400">
+              <span className="inline-flex items-center rounded-full border border-brand-100 bg-brand-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.1em] text-brand-700 dark:border-brand-800 dark:bg-brand-950/40 dark:text-brand-300">
                 {meta.weight} of exam
               </span>
             )}
             {meta.estMinutes && (
-              <span className="text-xs text-slate-500 dark:text-slate-400">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-grey-200 bg-white px-3 py-1 text-[11px] font-medium text-grey-600 dark:border-grey-700 dark:bg-grey-900 dark:text-grey-400">
+                <svg
+                  aria-hidden="true"
+                  width="11"
+                  height="11"
+                  viewBox="0 0 12 12"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                >
+                  <circle cx="6" cy="6" r="4.5" />
+                  <path d="M6 3.5V6l1.75 1" />
+                </svg>
                 ~{meta.estMinutes} min read
               </span>
             )}
           </div>
+        </div>
+      </section>
 
-          {/* Rendered markdown prose */}
-          <ModuleContent markdown={markdown} />
+      <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8 lg:py-16">
+        <div className="lg:grid lg:grid-cols-[16rem_1fr] lg:gap-12">
+          <Toc items={tocItems} />
 
-          {/* Prev / Next navigation */}
-          <ModuleNav
-            prev={prev ? { slug: prev.slug, title: prev.title } : undefined}
-            next={next ? { slug: next.slug, title: next.title } : undefined}
-          />
+          <div className="min-w-0">
+            <article className="rounded-2xl border border-grey-200 bg-white p-6 shadow-xs sm:p-10 dark:border-grey-800 dark:bg-grey-900/50">
+              <ModuleContent markdown={markdown} />
+            </article>
 
-          {/* Visual divider before quiz */}
-          <hr className="my-10 border-slate-200 dark:border-slate-700" />
+            <ModuleNav
+              prev={prev ? { slug: prev.slug, title: prev.title } : undefined}
+              next={next ? { slug: next.slug, title: next.title } : undefined}
+            />
 
-          {/* Quiz section — T8: wired from quizzesBySlug registry */}
-          {quiz ? (
-            <Quiz quiz={quiz} />
-          ) : (
-            <p className="text-sm text-slate-500 dark:text-slate-400">
-              No quiz available for this module.
-            </p>
-          )}
+            {quiz ? (
+              <Quiz quiz={quiz} />
+            ) : (
+              <p className="mt-12 rounded-xl border border-dashed border-grey-300 bg-grey-50 p-6 text-sm text-grey-500 dark:border-grey-700 dark:bg-grey-900/40 dark:text-grey-400">
+                No quiz available for this module.
+              </p>
+            )}
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }

@@ -16,36 +16,84 @@ export default function QuizQuestion({
   onSelect,
 }: QuizQuestionProps) {
   return (
-    <fieldset className="rounded-lg border border-slate-200 p-5 dark:border-slate-700">
-      <legend className="mb-4 text-sm font-semibold leading-relaxed text-slate-900 dark:text-slate-100">
+    <fieldset className="rounded-2xl border border-grey-200 bg-white p-6 shadow-xs transition-shadow hover:shadow-sm dark:border-grey-800 dark:bg-grey-900/60">
+      <legend className="px-1 text-sm font-semibold leading-relaxed text-grey-900 dark:text-grey-25">
         {question.prompt}
       </legend>
-      <div className="space-y-2">
-        {question.choices.map((choice) => {
+      <div className="mt-4 space-y-2">
+        {question.choices.map((choice, idx) => {
           const isSelected = selectedChoiceId === choice.id;
           const isCorrect = choice.id === question.correctChoiceId;
-          let choiceClass =
-            "flex items-start gap-3 rounded-md border px-4 py-3 text-sm cursor-pointer transition-colors ";
+          const letter = String.fromCharCode(65 + idx);
+
+          let wrapperClass =
+            "group relative flex items-start gap-3 rounded-xl border px-4 py-3 text-sm cursor-pointer transition-all duration-150 ";
+          let letterClass =
+            "flex h-7 w-7 shrink-0 items-center justify-center rounded-md border text-xs font-semibold transition-colors ";
+          let suffixNode: React.ReactNode = null;
 
           if (!revealed) {
-            choiceClass += isSelected
-              ? "border-indigo-400 bg-indigo-50 text-indigo-900 dark:border-indigo-500 dark:bg-indigo-900/30 dark:text-indigo-100"
-              : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50 text-slate-700 dark:border-slate-600 dark:bg-slate-800 dark:hover:border-slate-500 dark:text-slate-200";
+            wrapperClass += isSelected
+              ? "border-primary-400 bg-primary-50 text-grey-900 ring-1 ring-primary-300 dark:border-primary-500 dark:bg-primary-950/40 dark:text-grey-25 dark:ring-primary-700"
+              : "border-grey-200 bg-white text-grey-700 hover:border-primary-200 hover:bg-primary-50/40 dark:border-grey-800 dark:bg-grey-900/40 dark:text-grey-200 dark:hover:border-primary-800 dark:hover:bg-primary-950/20";
+            letterClass += isSelected
+              ? "border-primary-400 bg-primary-500 text-white dark:border-primary-500"
+              : "border-grey-200 bg-grey-50 text-grey-600 group-hover:border-primary-200 group-hover:text-primary-700 dark:border-grey-800 dark:bg-grey-900 dark:text-grey-400";
+          } else if (isCorrect) {
+            wrapperClass +=
+              "border-success-300 bg-success-50 text-success-900 dark:border-success-700 dark:bg-success-900/30 dark:text-success-100";
+            letterClass +=
+              "border-success-400 bg-success-500 text-white dark:border-success-600";
+            suffixNode = (
+              <span className="inline-flex shrink-0 items-center gap-1 text-[11px] font-semibold uppercase tracking-[0.1em] text-success-700 dark:text-success-300">
+                <svg
+                  aria-hidden="true"
+                  width="12"
+                  height="12"
+                  viewBox="0 0 12 12"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M2.5 6.5L5 9l4.5-5" />
+                </svg>
+                Correct
+              </span>
+            );
+          } else if (isSelected && !isCorrect) {
+            wrapperClass +=
+              "border-error-300 bg-error-50 text-error-900 dark:border-error-700 dark:bg-error-900/30 dark:text-error-100";
+            letterClass +=
+              "border-error-400 bg-error-500 text-white dark:border-error-600";
+            suffixNode = (
+              <span className="inline-flex shrink-0 items-center gap-1 text-[11px] font-semibold uppercase tracking-[0.1em] text-error-700 dark:text-error-300">
+                <svg
+                  aria-hidden="true"
+                  width="12"
+                  height="12"
+                  viewBox="0 0 12 12"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M3 3l6 6M9 3l-6 6" />
+                </svg>
+                Yours
+              </span>
+            );
           } else {
-            if (isCorrect) {
-              choiceClass +=
-                "border-green-400 bg-green-50 text-green-900 dark:border-green-500 dark:bg-green-900/30 dark:text-green-100";
-            } else if (isSelected && !isCorrect) {
-              choiceClass +=
-                "border-red-400 bg-red-50 text-red-900 dark:border-red-500 dark:bg-red-900/30 dark:text-red-100";
-            } else {
-              choiceClass +=
-                "border-slate-200 bg-white text-slate-500 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-400";
-            }
+            wrapperClass +=
+              "border-grey-200 bg-white text-grey-500 dark:border-grey-800 dark:bg-grey-900/40 dark:text-grey-400";
+            letterClass +=
+              "border-grey-200 bg-grey-50 text-grey-400 dark:border-grey-800 dark:bg-grey-900 dark:text-grey-500";
           }
 
           return (
-            <label key={choice.id} className={choiceClass}>
+            <label key={choice.id} className={wrapperClass}>
               <input
                 type="radio"
                 name={question.id}
@@ -53,31 +101,34 @@ export default function QuizQuestion({
                 checked={isSelected}
                 onChange={() => !revealed && onSelect(choice.id)}
                 disabled={revealed}
-                className="mt-0.5 shrink-0 accent-indigo-600"
+                className="sr-only"
                 aria-label={choice.text}
               />
-              <span className="flex-1">{choice.text}</span>
-              {revealed && isCorrect && (
-                <span className="shrink-0 text-xs font-semibold text-green-700 dark:text-green-400">
-                  Correct
-                </span>
-              )}
-              {revealed && isSelected && !isCorrect && (
-                <span className="shrink-0 text-xs font-semibold text-red-700 dark:text-red-400">
-                  Incorrect
-                </span>
-              )}
+              <span aria-hidden="true" className={letterClass}>
+                {letter}
+              </span>
+              <span className="flex-1 pt-0.5 leading-relaxed">{choice.text}</span>
+              {suffixNode}
             </label>
           );
         })}
       </div>
       {revealed && question.explanation && (
-        <p className="mt-4 rounded-md bg-slate-50 px-4 py-3 text-sm leading-relaxed text-slate-700 dark:bg-slate-800 dark:text-slate-300">
-          <span className="mr-1 font-semibold text-slate-900 dark:text-slate-100">
-            Explanation:
+        <div className="mt-5 flex gap-3 rounded-xl border border-primary-100 bg-primary-50/60 px-4 py-3 dark:border-primary-900 dark:bg-primary-950/30">
+          <span
+            aria-hidden="true"
+            className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-primary-500 text-[11px] font-bold uppercase text-white"
+          >
+            i
           </span>
-          {question.explanation}
-        </p>
+          <p className="text-sm leading-relaxed text-grey-800 dark:text-grey-200">
+            <span className="mr-1 font-semibold text-grey-900 dark:text-grey-25">
+              Explanation
+            </span>
+            <span className="text-grey-500">·</span>{" "}
+            {question.explanation}
+          </p>
+        </div>
       )}
     </fieldset>
   );
