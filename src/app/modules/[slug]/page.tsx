@@ -1,101 +1,108 @@
-import { notFound } from 'next/navigation';
-import { getModuleBySlug, getModuleSlugs, getAllModules } from '@/lib/modules';
-import { renderMarkdown } from '@/lib/markdown';
-import Sidebar from '@/components/layout/Sidebar';
-import ModuleContent from '@/components/modules/ModuleContent';
-import Badge from '@/components/ui/Badge';
-import Button from '@/components/ui/Button';
-import MarkCompleteButton from '@/components/modules/MarkCompleteButton';
+import type { Metadata } from "next";
+import { notFound } from "next/navigation";
+import { getAllModules, getModuleBySlug } from "@/lib/modules";
+import { extractToc } from "@/lib/markdown";
+import { quizzesBySlug } from "@/content/quizzes";
+import ModuleContent from "@/components/ModuleContent";
+import ModuleNav from "@/components/ModuleNav";
+import Toc from "@/components/Toc";
+import Quiz from "@/components/Quiz";
 
-const domainColors = ['#e07a5f', '#3d85c6', '#10b981', '#f59e0b', '#8b5cf6'];
-
-export async function generateStaticParams() {
-  try {
-    const slugs = await getModuleSlugs();
-    return slugs.map((slug) => ({ slug }));
-  } catch {
-    return [];
-  }
+interface PageProps {
+  params: { slug: string };
 }
 
-export default async function ModuleDetailPage({
-  params,
-}: {
-  params: { slug: string };
-}) {
-  let mod;
-  try {
-    mod = await getModuleBySlug(params.slug);
-  } catch {
+/**
+ * Only statically render the 7 non-landing module slugs.
+ * Any other path (including /modules/exam-overview) falls through to notFound().
+ * Setting dynamicParams = false ensures unlisted slugs return 404 at runtime.
+ */
+export const dynamicParams = false;
+
+export function generateStaticParams() {
+  return getAllModules().map((m) => ({ slug: m.slug }));
+}
+
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const result = getModuleBySlug(params.slug);
+  // Return empty metadata for landing module — it shouldn't be reached
+  if (!result || result.meta.isLanding) return {};
+  return {
+    title: result.meta.title,
+    description: result.meta.summary,
+  };
+}
+
+export default function ModulePage({ params }: PageProps) {
+  const result = getModuleBySlug(params.slug);
+
+  // 404 if slug not found OR if it's the landing module (exam-overview)
+  if (!result || result.meta.isLanding) {
     notFound();
   }
 
-  if (!mod) notFound();
+  const { meta, markdown } = result;
+  const tocItems = extractToc(markdown);
 
-  const html = await renderMarkdown(mod.content);
-  const color = domainColors[(mod.domain - 1) % domainColors.length];
+  // Build prev/next navigation from the ordered non-landing modules list
+  const modules = getAllModules();
+  const currentIndex = modules.findIndex((m) => m.slug === params.slug);
+  const prev = currentIndex > 0 ? modules[currentIndex - 1] : undefined;
+  const next =
+    currentIndex < modules.length - 1 ? modules[currentIndex + 1] : undefined;
 
-  // Get all modules for prev/next navigation
-  let allModules: Awaited<ReturnType<typeof getAllModules>> = [];
-  try {
-    allModules = await getAllModules();
-  } catch {
-    // ignore
+  // Look up quiz — may be undefined if somehow slug has no quiz file
+  const quiz = quizzesBySlug[params.slug];
+  if (!quiz) {
+    console.warn(`[ModulePage] No quiz found for slug: ${params.slug}`);
   }
 
-  const currentIndex = allModules.findIndex((m) => m.slug === mod!.slug);
-  const prevModule = currentIndex > 0 ? allModules[currentIndex - 1] : null;
-  const nextModule =
-    currentIndex < allModules.length - 1 ? allModules[currentIndex + 1] : null;
-
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-      {/* Header */}
-      <div className="mb-8">
-        <div className="flex items-center gap-3 mb-3">
-          <Badge variant="domain" color={color}>
-            Domain {mod.domain}
-          </Badge>
-          <span className="text-sm text-[var(--text-secondary)]">
-            {mod.weight}% of exam
-          </span>
-        </div>
-        <h1 className="text-3xl font-bold text-[var(--text-primary)] mb-2">
-          {mod.title}
-        </h1>
-        <p className="text-[var(--text-secondary)]">{mod.description}</p>
-      </div>
+    <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
+      <div className="lg:grid lg:grid-cols-[16rem_1fr] lg:gap-10">
+        {/* Sidebar TOC — rendered as sticky on lg, collapsible details on smaller screens */}
+        <Toc items={tocItems} />
 
-      {/* Content + Sidebar */}
-      <div className="flex gap-8">
-        <div className="flex-1 min-w-0">
-          <ModuleContent html={html} />
-
-          {/* Mark complete */}
-          <div className="mt-10 mb-8">
-            <MarkCompleteButton slug={mod.slug} />
-          </div>
-
-          {/* Prev / Next */}
-          <div className="flex items-center justify-between gap-4 pt-8 border-t border-[var(--border-card)]">
-            {prevModule ? (
-              <Button href={`/modules/${prevModule.slug}`} variant="secondary" size="sm">
-                &larr; {prevModule.title}
-              </Button>
-            ) : (
-              <div />
+        {/* Main content column */}
+        <div className="min-w-0">
+          {/* Module metadata badges */}
+          <div className="mb-6 flex flex-wrap items-center gap-3">
+            <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-400">
+              Domain {meta.domain}
+            </span>
+            {meta.weight !== "—" && (
+              <span className="text-xs font-semibold text-indigo-600 dark:text-indigo-400">
+                {meta.weight} of exam
+              </span>
             )}
-            {nextModule ? (
-              <Button href={`/modules/${nextModule.slug}`} variant="secondary" size="sm">
-                {nextModule.title} &rarr;
-              </Button>
-            ) : (
-              <div />
+            {meta.estMinutes && (
+              <span className="text-xs text-slate-500 dark:text-slate-400">
+                ~{meta.estMinutes} min read
+              </span>
             )}
           </div>
-        </div>
 
-        <Sidebar sections={mod.sections} />
+          {/* Rendered markdown prose */}
+          <ModuleContent markdown={markdown} />
+
+          {/* Prev / Next navigation */}
+          <ModuleNav
+            prev={prev ? { slug: prev.slug, title: prev.title } : undefined}
+            next={next ? { slug: next.slug, title: next.title } : undefined}
+          />
+
+          {/* Visual divider before quiz */}
+          <hr className="my-10 border-slate-200 dark:border-slate-700" />
+
+          {/* Quiz section — T8: wired from quizzesBySlug registry */}
+          {quiz ? (
+            <Quiz quiz={quiz} />
+          ) : (
+            <p className="text-sm text-slate-500 dark:text-slate-400">
+              No quiz available for this module.
+            </p>
+          )}
+        </div>
       </div>
     </div>
   );

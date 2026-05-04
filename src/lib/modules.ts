@@ -1,161 +1,128 @@
-import fs from 'fs';
-import path from 'path';
-import type { Module, Section } from '@/types';
-import { slugify } from './utils';
+import fs from "fs";
+import path from "path";
+import type { ModuleMeta } from "@/types/modules";
 
-const modulesDirectory = path.join(process.cwd(), 'modules');
+/**
+ * Single source of truth for all module slugs and metadata.
+ * The landing module (00-exam-overview.md) is included here with isLanding: true
+ * so it can be referenced for the home page, but it is EXCLUDED from
+ * generateStaticParams — visiting /modules/exam-overview returns 404.
+ */
+export const MODULES: ModuleMeta[] = [
+  {
+    slug: "exam-overview",
+    title: "Exam Overview",
+    domain: "0",
+    weight: "—",
+    sourceFile: "00-exam-overview.md",
+    isLanding: true,
+    summary: "Introduction to the CCA-F exam structure, domains, and scoring.",
+  },
+  {
+    slug: "agentic-architecture",
+    title: "Agentic Architecture",
+    domain: "1",
+    weight: "22%",
+    sourceFile: "01-agentic-architecture.md",
+    isLanding: false,
+    summary: "Multi-agent orchestration, tool use, and autonomous workflow design.",
+    estMinutes: 25,
+  },
+  {
+    slug: "claude-code-configuration",
+    title: "Claude Code Configuration",
+    domain: "2",
+    weight: "18%",
+    sourceFile: "02-claude-code-configuration.md",
+    isLanding: false,
+    summary: "CLAUDE.md, memory types, MCP server setup, and CLI configuration.",
+    estMinutes: 20,
+  },
+  {
+    slug: "prompt-engineering",
+    title: "Prompt Engineering",
+    domain: "3",
+    weight: "20%",
+    sourceFile: "03-prompt-engineering.md",
+    isLanding: false,
+    summary: "Effective prompting, chain-of-thought, and prompt patterns for Claude.",
+    estMinutes: 22,
+  },
+  {
+    slug: "tool-design-mcp",
+    title: "Tool Design & MCP",
+    domain: "4",
+    weight: "18%",
+    sourceFile: "04-tool-design-mcp.md",
+    isLanding: false,
+    summary: "Model Context Protocol, tool schemas, and custom server development.",
+    estMinutes: 20,
+  },
+  {
+    slug: "context-management",
+    title: "Context Management",
+    domain: "5",
+    weight: "12%",
+    sourceFile: "05-context-management.md",
+    isLanding: false,
+    summary: "Context window strategy, summarization, and efficient information retrieval.",
+    estMinutes: 15,
+  },
+  {
+    slug: "rag-with-claude",
+    title: "RAG with Claude",
+    domain: "6",
+    weight: "10%",
+    sourceFile: "06-rag-with-claude.md",
+    isLanding: false,
+    summary: "Retrieval-augmented generation patterns, chunking, and embedding strategies.",
+    estMinutes: 12,
+  },
+  {
+    slug: "cross-module-reference",
+    title: "Cross-Module Reference",
+    domain: "7",
+    weight: "—",
+    sourceFile: "07-cross-module-reference.md",
+    isLanding: false,
+    summary: "Quick-reference tables spanning all domains for final review.",
+    estMinutes: 10,
+  },
+];
 
-function parseModule(filename: string): Module {
-  const filePath = path.join(modulesDirectory, filename);
-  const content = fs.readFileSync(filePath, 'utf-8');
-
-  // Extract slug from filename: module-1-agentic-architecture.md -> module-1-agentic-architecture
-  const slug = filename.replace(/\.md$/, '');
-
-  // Extract domain number from filename: module-N-...
-  const domainMatch = filename.match(/^module-(\d+)-/);
-  const domain = domainMatch ? parseInt(domainMatch[1], 10) : 0;
-
-  // Extract title from first # heading
-  const titleMatch = content.match(/^#\s+(.+)$/m);
-  const title = titleMatch ? titleMatch[1].trim() : '';
-
-  // Extract weight - handle multiple formats:
-  // "Exam Weight: 27% | 7 Task Statements"
-  // "**Weight:** 20% of exam | 6 Task Statements"
-  // "**Exam Weight:** 20% | **Task Statements:** 6"
-  // "**Exam Weight: 15% of total exam**"
-  const weightMatch = content.match(/(?:Exam\s+)?Weight[:\s*]+(\d+)%/i);
-  const weight = weightMatch ? parseInt(weightMatch[1], 10) : 0;
-
-  // Extract task statements count - handle multiple formats:
-  // "7 Task Statements"
-  // "**Task Statements:** 6"
-  // Fallback: count ## Task N.N headings in the content
-  const taskMatch = content.match(
-    /(\d+)\s+Task\s+Statements|Task\s+Statements[:\s*]+(\d+)/i
-  );
-  let taskStatements = taskMatch
-    ? parseInt(taskMatch[1] || taskMatch[2], 10)
-    : 0;
-
-  if (taskStatements === 0) {
-    const taskHeadings = content.match(/^## Task \d+\.\d+/gm);
-    taskStatements = taskHeadings ? taskHeadings.length : 0;
-  }
-
-  // Extract description: first non-empty paragraph after the title line
-  // Skip the title line, the metadata line, and any --- separators
-  const lines = content.split('\n');
-  let description = '';
-  let pastTitle = false;
-  for (const line of lines) {
-    const trimmed = line.trim();
-    if (!pastTitle) {
-      if (trimmed.startsWith('# ')) {
-        pastTitle = true;
-      }
-      continue;
-    }
-    // Skip metadata lines, separators, empty lines
-    if (
-      trimmed === '' ||
-      trimmed === '---' ||
-      trimmed.startsWith('**Exam Weight') ||
-      trimmed.startsWith('**Weight') ||
-      trimmed.startsWith('**Estimated')
-    ) {
-      continue;
-    }
-    // Skip ## headings - we want the paragraph, not a heading
-    if (trimmed.startsWith('#')) {
-      // If we reach a heading without finding a paragraph, look in the ## Overview section
-      break;
-    }
-    // Found the first paragraph
-    description = trimmed;
-    break;
-  }
-
-  // If no description found above (e.g., module-2 where first paragraph is under ## Overview),
-  // look for the first paragraph after ## Overview
-  if (!description) {
-    let inOverview = false;
-    for (const line of lines) {
-      const trimmed = line.trim();
-      if (trimmed === '## Overview' || trimmed === '## Module Overview') {
-        inOverview = true;
-        continue;
-      }
-      if (inOverview) {
-        if (trimmed === '' || trimmed === '---') continue;
-        if (trimmed.startsWith('#')) break;
-        description = trimmed;
-        break;
-      }
-    }
-  }
-
-  // Remove any bold markdown from description
-  description = description.replace(/\*\*/g, '');
-
-  // Extract sections: all ## and ### headings
-  // Deduplicate IDs by appending -2, -3, etc. for duplicates (matching rehype-slug behavior)
-  const sections: Section[] = [];
-  const idCounts: Record<string, number> = {};
-  const headingRegex = /^(#{2,3})\s+(.+)$/gm;
-  let match;
-  while ((match = headingRegex.exec(content)) !== null) {
-    const depth = match[1].length; // 2 or 3
-    const sectionTitle = match[2].trim();
-    const baseId = slugify(sectionTitle);
-
-    // Track how many times this base ID has appeared
-    const count = idCounts[baseId] || 0;
-    idCounts[baseId] = count + 1;
-
-    // First occurrence uses the base ID; subsequent ones get -2, -3, etc.
-    const id = count === 0 ? baseId : `${baseId}-${count + 1}`;
-
-    sections.push({
-      id,
-      title: sectionTitle,
-      depth,
-    });
-  }
-
-  return {
-    slug,
-    title,
-    domain,
-    weight,
-    taskStatements,
-    description,
-    content,
-    sections,
-  };
+export interface GetAllModulesOptions {
+  includeLanding?: boolean;
 }
 
-let cachedModules: Module[] | null = null;
-
-export function getAllModules(): Module[] {
-  if (cachedModules) return cachedModules;
-
-  const filenames = fs
-    .readdirSync(modulesDirectory)
-    .filter((f) => f.startsWith('module-') && f.endsWith('.md'));
-
-  const modules = filenames.map(parseModule);
-  modules.sort((a, b) => a.domain - b.domain);
-
-  cachedModules = modules;
-  return modules;
+/**
+ * Returns all non-landing modules by default.
+ * Pass { includeLanding: true } to also include the exam overview entry.
+ */
+export function getAllModules(options: GetAllModulesOptions = {}): ModuleMeta[] {
+  if (options.includeLanding) {
+    return MODULES;
+  }
+  return MODULES.filter((m) => !m.isLanding);
 }
 
-export function getModuleBySlug(slug: string): Module | undefined {
-  return getAllModules().find((m) => m.slug === slug);
+/**
+ * Looks up a module by slug and reads its markdown from disk.
+ * Reads at build time inside RSC — never on the client.
+ */
+export function getModuleBySlug(
+  slug: string
+): { meta: ModuleMeta; markdown: string } | null {
+  const meta = MODULES.find((m) => m.slug === slug);
+  if (!meta) return null;
+  const filePath = path.join(process.cwd(), "modules", meta.sourceFile);
+  const markdown = fs.readFileSync(filePath, "utf-8");
+  return { meta, markdown };
 }
 
-export function getModuleSlugs(): string[] {
-  return getAllModules().map((m) => m.slug);
+/**
+ * Returns the raw markdown for the landing page (00-exam-overview.md).
+ */
+export function getLandingMarkdown(): string {
+  const filePath = path.join(process.cwd(), "modules", "00-exam-overview.md");
+  return fs.readFileSync(filePath, "utf-8");
 }
